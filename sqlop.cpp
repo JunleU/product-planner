@@ -278,6 +278,24 @@ QString SqlOP::getColor(QString equip_id)
     return color;
 }
 
+QStringList SqlOP::getEquipIds()
+{
+    QSqlQuery q(db);
+    QString strSql = "SELECT 设备编号 FROM equipments ORDER BY 设备编号";
+    QStringList l;
+
+    bool ret = q.exec(strSql);
+    if(!ret) {
+       qDebug()<< q.lastError().text(); 
+    } else {
+        //每次都读取一行数据
+        while(q.next()) {
+            l<<q.value(0).toString();
+        }
+    }
+    return l; 
+}
+
 
 bool SqlOP::isStockExist(QString stock_id, QString work_order)
 {
@@ -415,6 +433,436 @@ bool SqlOP::deleteStock(QString stock_id, QString work_order)
     return true;
 }
 
+
+bool SqlOP::isEquipExist(QString equip_id)
+{
+    QSqlQuery q(db);
+    QString strSql = "SELECT * FROM equipments WHERE 设备编号 = '" + equip_id + "'";
+    bool ret = q.exec(strSql);
+    if(!ret) {
+        qDebug()<< q.lastError().text();
+        return false; 
+    } 
+    return q.next();
+}
+
+bool SqlOP::updateEquip(QString equip_id, QStringList equip_info)
+{
+    QSqlQuery q(db);
+
+    // 设备编号 TEXT, 设备名称 TEXT, 稼动率 REAL, 状态 TEXT, 最大负荷 REAL, 标记颜色 TEXT
+    // 0,            1,             2,          3,           4,          5
+
+    // 如果equip_id为空，操作为插入
+    if(equip_id.isEmpty()) {
+        if (isEquipExist(equip_info[0])) {
+            // 已存在，弹窗
+            QMessageBox::information(nullptr, "提示", "已存在该设备");
+            return false; 
+        }
+        // 插入
+        QString strSql = "INSERT INTO equipments VALUES(";
+        for(int i = 0; i < equip_info.size(); i++) {
+            if (equip_info[i].isEmpty()) {
+                QMessageBox::information(nullptr, "提示", "请填写完整信息");
+                return false;
+            }
+            if (i == 2 || i == 4)
+                strSql +=  equip_info[i] + ", "; 
+            else
+                strSql += "'" + equip_info[i] + "', ";
+        }  
+        // 去掉最后一个逗号
+        strSql.chop(2);
+        strSql += ")";
+        bool ret = q.exec(strSql);
+        if(!ret) {
+            qDebug()<< q.lastError().text();
+            QMessageBox::information(nullptr, "提示", "插入失败");
+            return false;
+        }
+        return true;
+    } 
+
+    // 如果equip_id不为空，操作为更新
+    if (isEquipExist(equip_id)) {
+        // 先判断设备编号是否修改
+        if (equip_info[0] != equip_id) {
+            if (isEquipExist(equip_info[0])) {
+                // 已存在，弹窗
+                QMessageBox::information(nullptr, "提示", "已存在该设备");
+                return false;
+            }
+        }
+        // 设备编号 TEXT, 设备名称 TEXT, 稼动率 REAL, 状态 TEXT, 最大负荷 REAL, 标记颜色 TEXT
+        QStringList attr_names = {"设备编号", "设备名称", "稼动率", "状态", "最大负荷", "标记颜色"};
+        QString strSql = "UPDATE equipments SET ";
+        for(int i = 0; i < equip_info.size(); i++) {
+            if (equip_info[i].isEmpty()) {
+                QMessageBox::information(nullptr, "提示", "请填写完整信息");
+                return false;
+            }
+            if (i == 2 || i == 4)
+                strSql += attr_names[i] + " = " + equip_info[i] + ", ";
+            else
+                strSql += attr_names[i] + " = '" + equip_info[i] + "', ";
+        }
+        // 去掉最后一个逗号
+        strSql.chop(2);
+        strSql += " WHERE 设备编号 = '" + equip_id + "'"; 
+
+        bool ret = q.exec(strSql);
+        if(!ret) {
+            qDebug()<< q.lastError().text();
+            QMessageBox::information(nullptr, "提示", "更新失败");
+            return false;
+        }
+
+        if (equip_info[0] != equip_id) {
+            // 更新工序中的设备编号
+            QString strSql = "UPDATE steps SET 设备编号 = '" + equip_info[0] + "' WHERE 设备编号 = '" + equip_id + "';";
+            bool ret = q.exec(strSql);  
+            if(!ret) {
+                qDebug()<< q.lastError().text();
+                QMessageBox::information(nullptr, "提示", "更新失败");
+                return false; 
+            }
+
+            // TODO: 更新plans中的设备编号
+        }
+    }
+    return true;
+}
+
+bool SqlOP::deleteEquip(QString equip_id)
+{
+   // 检查工序中是否有该设备
+    QSqlQuery q(db);
+    QString strSql = "SELECT * FROM steps WHERE 设备编号 = '" + equip_id + "'";
+    bool ret = q.exec(strSql);
+    if(!ret) {
+        qDebug()<< q.lastError().text();
+        QMessageBox::information(nullptr, "提示", "删除失败");
+        return false;
+    }
+    if (q.next()) {
+        QMessageBox::information(nullptr, "提示", "请先在包含该设备的工序中删除该设备");
+        return false;
+    } 
+
+    // TODO: 检查plans中是否有该设备
+
+    // 删除设备
+    strSql = "DELETE FROM equipments WHERE 设备编号 = '" + equip_id + "';";
+    ret = q.exec(strSql);
+    if(!ret) {
+        qDebug()<< q.lastError().text();
+        QMessageBox::information(nullptr, "提示", "删除失败");
+        return false;
+    }
+    return true;
+}
+
+
+bool SqlOP::updateStep(QString step_name, QStringList info)
+{
+    QSqlQuery q(db);
+
+    // 工序名称不能为空
+    if (info.size() <= 1 || info[0].isEmpty()) {
+        QMessageBox::information(nullptr, "提示", "请填写完整信息");
+        return false;
+    }
+    
+    // 如果step_name为空，操作为插入
+    if(step_name.isEmpty()) {
+        QString new_name = info[0];
+        if (isStepExist(new_name)) {
+            // 已存在，弹窗
+            QMessageBox::information(nullptr, "提示", "已存在该工序");
+            return false;
+        }
+        // 插入
+        for (int i = 1; i < info.size(); i++) {
+            bool ret = q.exec("INSERT INTO steps VALUES('" + new_name + "', '" + info[i] + "');");
+            if(!ret) {
+                qDebug()<< q.lastError().text();
+                QMessageBox::information(nullptr, "提示", "插入失败");
+                return false; 
+            }
+        }
+        return true;
+    }
+
+    // 如果step_name不为空，操作为更新
+    if (isStepExist(step_name)) {
+        // 先判断工序名称是否修改
+        if (info[0]!= step_name) {
+            if (isStepExist(info[0])) {
+                // 已存在，弹窗
+                QMessageBox::information(nullptr, "提示", "已存在该工序");
+                return false; 
+            }  
+        }  
+        // 删除旧的工序
+        QString strSql = "DELETE FROM steps WHERE 工序名称 = '" + step_name + "';";
+        bool ret = q.exec(strSql);
+        if(!ret) {
+            qDebug()<< q.lastError().text();
+            QMessageBox::information(nullptr, "提示", "更新失败");
+            return false;
+        }
+        // 插入新的工序
+        for (int i = 1; i < info.size(); i++) {
+            ret = q.exec("INSERT INTO steps VALUES('" + info[0] + "', '" + info[i] + "');"); 
+        }
+        if(!ret) {
+            qDebug()<< q.lastError().text();
+            QMessageBox::information(nullptr, "提示", "更新失败");
+            return false; 
+        }
+
+        if (info[0]!= step_name) {
+            // 更新tech和tech_param 中的工序名称
+            QString strSql = "UPDATE techs SET 工序名称 = '" + info[0] + "' WHERE 工序名称 = '" + step_name + "';";
+            bool ret = q.exec(strSql);
+            if(!ret) {
+                qDebug()<< q.lastError().text();
+                QMessageBox::information(nullptr, "提示", "更新失败");
+                return false;
+            }
+            strSql = "UPDATE tech_params SET 工序名称 = '" + info[0] + "' WHERE 工序名称 = '" + step_name + "';";
+            ret = q.exec(strSql);
+            if(!ret) {
+                qDebug()<< q.lastError().text();
+                QMessageBox::information(nullptr, "提示", "更新失败");
+                return false;
+            }
+        } 
+    }
+    return true;
+}
+
+bool SqlOP::isStepExist(QString step_name)
+{
+    QSqlQuery q(db);
+    QString strSql = "SELECT * FROM steps WHERE 工序名称 = '" + step_name + "'";
+    bool ret = q.exec(strSql);
+    if(!ret) {
+        qDebug()<< q.lastError().text();
+        return false;
+    }
+    return q.next();
+}
+
+
+bool SqlOP::deleteStep(QString step_name)
+{
+    QSqlQuery q(db);
+    // 检查tech中是否有该工序
+    QString strSql = "SELECT * FROM techs WHERE 工序名称 = '" + step_name + "'";
+    bool ret = q.exec(strSql);
+    if(!ret) {
+        qDebug()<< q.lastError().text();
+        QMessageBox::information(nullptr, "提示", "删除失败");
+        return false;
+    }
+    if (q.next()) {
+        QMessageBox::information(nullptr, "提示", "请先在包含该工序的工艺中删除该工序");
+        return false;
+    }
+
+    strSql = "DELETE FROM steps WHERE 工序名称 = '" + step_name + "';";
+    ret = q.exec(strSql);
+    if(!ret) {
+        qDebug()<< q.lastError().text();
+        QMessageBox::information(nullptr, "提示", "删除失败");
+        return false; 
+    }
+    return true;
+}
+
+
+bool SqlOP::updateTech(QString old_name, QString new_name, QStringList info)
+{
+    QSqlQuery q(db);
+
+    // 工艺名称不能为空 
+    if (new_name == "" || info.size() == 0) {
+        QMessageBox::information(nullptr, "提示", "请填写完整信息");
+        return false; 
+    }
+
+    // 如果old_name为空，操作为插入
+    if(old_name == "") {
+        if (isTechExist(new_name)) {
+            // 已存在，弹窗
+            QMessageBox::information(nullptr, "提示", "已存在该工艺");
+            return false;
+        }  
+        // 插入
+        // 工艺名称 工序 次序
+        for (int i = 0; i < info.size(); i++) {
+            bool ret = q.exec("INSERT INTO techs VALUES('" + 
+                new_name + "', '" + 
+                info[i] + 
+                "', " + QString::number(i + 1) + ");");
+            if(!ret) {
+                qDebug()<< q.lastError().text();
+                QMessageBox::information(nullptr, "提示", "插入失败");
+                return false;
+            }
+
+        }
+        return true;
+    }
+    // 如果old_name不为空，操作为更新
+    if (isTechExist(old_name)) {
+        // 先判断工艺名称是否修改
+        if (old_name != new_name) {
+            if (isTechExist(new_name)) {
+                // 已存在，弹窗
+                QMessageBox::information(nullptr, "提示", "已存在该工艺");
+                return false;
+            }  
+        }  
+
+        // 检查stocks中是否有该工艺
+        QString strSql = "SELECT * FROM stocks WHERE 工艺 = '" + old_name + "'";
+        bool ret = q.exec(strSql);
+        if(!ret) {
+            qDebug()<< q.lastError().text();
+            QMessageBox::information(nullptr, "提示", "更新失败");
+            return false;
+        }
+        bool flag = false;
+        QStringList old_steps;
+        if (q.next()) {
+            // 检查工序集合是否改变
+            old_steps = getStepsOfTech(old_name);
+            QStringList new_steps = info;
+            // 去掉重复的元素
+            new_steps.removeDuplicates();
+            // 排序
+            old_steps.sort();
+            new_steps.sort();
+            // 比较
+            if (old_steps != new_steps) {
+                // 让用户确认
+                QMessageBox::StandardButton reply;
+                reply = QMessageBox::question(nullptr, "提示", "该工艺已被使用，"
+                    "继续更新将导致该工艺下的所有存货的工艺参数改变，是否继续？", QMessageBox::Yes|QMessageBox::No);
+                if (reply == QMessageBox::No) {
+                    return false; 
+                }
+                flag = true;
+            }
+        }
+
+        // 删除旧的工艺
+        strSql = "DELETE FROM techs WHERE 工艺名称 = '" + old_name + "';";
+        ret = q.exec(strSql);
+        if(!ret) {
+            qDebug()<< q.lastError().text();
+            QMessageBox::information(nullptr, "提示", "更新失败");
+            return false;
+        }
+        // 插入新的工艺
+        for (int i = 0; i < info.size(); i++) {
+            ret = q.exec("INSERT INTO techs VALUES('" + new_name + "', '" 
+                + info[i] + "', " + QString::number(i + 1) + ");");
+            if(!ret) {
+                qDebug()<< q.lastError().text();
+                QMessageBox::information(nullptr, "提示", "更新失败");
+                return false; 
+            } 
+        }
+
+        if (old_name != new_name) {
+            // 更新stocks中的工艺名称
+            strSql = "UPDATE stocks SET 工艺 = '" + new_name + "' WHERE 工艺 = '" + old_name + "';";
+            ret = q.exec(strSql);
+            if(!ret) {
+                qDebug()<< q.lastError().text();
+                QMessageBox::information(nullptr, "提示", "更新失败");
+                return false;
+            }
+
+        }
+
+        if (flag) {
+            // 选择该工艺下的所有存货，删除这些存货的不在新工艺中的工序的tech_params
+            strSql = "DELETE FROM tech_params WHERE "
+                "(存货编号, 工单号) IN (SELECT 存货编号, 工单号 FROM stocks WHERE 工艺 = '" + new_name + "') "
+                "AND 工序名称 NOT IN (SELECT 工序名称 FROM techs WHERE 工艺名称 = '" + new_name + "');";
+            ret = q.exec(strSql);
+            if(!ret) {
+                qDebug()<< q.lastError().text();
+                QMessageBox::information(nullptr, "提示", "更新失败");
+                return false;
+            }
+            // 找到新工艺中的不在旧工艺中的工序
+            QStringList steps = info;
+            steps.removeDuplicates();
+            for (int i = 0; i < steps.size(); i++) {
+                if (!old_steps.contains(steps[i])) {
+                    // 插入这些工序的tech_params
+                    strSql = "INSERT INTO tech_params SELECT 存货编号, 工单号, '"
+                         + steps[i] + "', 0 FROM stocks WHERE 工艺 = '" + new_name + "';";
+                    ret = q.exec(strSql); 
+                    if(!ret) {
+                        qDebug()<< q.lastError().text();
+                        QMessageBox::information(nullptr, "提示", "更新失败");
+                        return false; 
+                    }
+                } 
+            }
+        }
+        
+        
+    }
+    return true;
+}
+
+
+bool SqlOP::isTechExist(QString tech_name)
+{
+    QSqlQuery q(db);
+    QString strSql = "SELECT * FROM techs WHERE 工艺名称 = '" + tech_name + "'";
+    bool ret = q.exec(strSql);
+    if(!ret) {
+        qDebug()<< q.lastError().text();
+        return false;
+    }
+    return q.next();
+}
+
+bool SqlOP::deleteTech(QString tech_name)
+{
+    QSqlQuery q(db);
+    // 检查stocks中是否有该工艺
+    QString strSql = "SELECT * FROM stocks WHERE 工艺 = '" + tech_name + "'";
+    bool ret = q.exec(strSql);
+    if(!ret) {
+        qDebug()<< q.lastError().text();
+        QMessageBox::information(nullptr, "提示", "删除失败");
+        return false;
+    }
+    if (q.next()) {
+        QMessageBox::information(nullptr, "提示", "请先在该工艺相关存货中替换该工艺");
+        return false;
+    } 
+
+    // 删除工艺
+    strSql = "DELETE FROM techs WHERE 工艺名称 = '" + tech_name + "';";
+    ret = q.exec(strSql);
+    if(!ret) {
+        qDebug()<< q.lastError().text();
+        QMessageBox::information(nullptr, "提示", "删除失败");
+        return false;
+    }
+    return true;
+}
 
 
 // DEBUG

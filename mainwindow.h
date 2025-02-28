@@ -33,11 +33,53 @@ private slots:
 
     void on_btn_cancel_stock_clicked();
 
+    void on_btn_edit_equip_clicked();
+
+    void on_btn_add_equip_clicked();
+
+    void on_btn_save_equip_clicked();
+
+    void on_btn_cancel_edit_equip_clicked();
+
+    void on_btn_edit_equip_color_clicked();
+
+    void on_btn_del_equip_clicked();
+
+    void on_btn_edit_step_clicked();
+
+    void on_btn_add_step_clicked();
+
+    void on_btn_save_step_clicked();
+
+    void on_btn_del_step_clicked();
+
+    void on_btn_cancel_step_clicked();
+
+    void on_btn_edit_tech_clicked();
+
+    void on_btn_add_tech_clicked();
+
+    void on_btn_save_tech_clicked();
+
+    void on_btn_cancel_tech_clicked();
+
+    void on_btn_del_tech_clicked();
+
 private:
     Ui::MainWindow *ui;
 
     int editing_stock_row;
     QStringList editing_stock_info;
+
+    int editing_equip_row;
+    QStringList editing_equip_info;
+
+    int editing_step_row;
+    QString editing_step_name;
+
+    int editing_tech_row;
+    QString editing_tech_name;
+    QStringList editing_tech_info;
 
     void update_equips();
     void update_techs();

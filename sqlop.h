@@ -52,6 +52,9 @@ public:
     // 返回指定设备的标记颜色
     QString getColor(QString equip_id);
 
+    // 返回所有设备编号
+    QStringList getEquipIds();
+
     // 是否存在指定存货
     bool isStockExist(QString stock_id, QString work_order);
 
@@ -60,6 +63,33 @@ public:
 
     // 删除库存信息
     bool deleteStock(QString stock_id, QString work_order);
+
+    // 是否存在指定设备
+    bool isEquipExist(QString equip_id);
+
+    // 添加或更新设备信息
+    bool updateEquip(QString equip_id, QStringList info);
+
+    // 删除设备信息
+    bool deleteEquip(QString equip_id);
+
+    // 添加或更新工序信息
+    bool updateStep(QString step_name, QStringList info);
+
+    // 是否存在指定工序
+    bool isStepExist(QString step_name);
+
+    // 删除工序信息
+    bool deleteStep(QString step_name);
+
+    // 添加或更新工艺信息
+    bool updateTech(QString old_name, QString new_name, QStringList info);
+
+    // 是否存在指定工艺
+    bool isTechExist(QString tech_name);
+
+    // 删除工艺信息
+    bool deleteTech(QString tech_name);
 
 
 private:
