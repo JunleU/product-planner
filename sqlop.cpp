@@ -76,6 +76,33 @@ void SqlOP::init()
                    "参数值 REAL, "
                    "PRIMARY KEY (存货编号, 工单号, 工序名称) ); ");
     }
+    // 计划
+    if (!db.tables().contains("plans")) {
+        query.exec("CREATE TABLE plans "
+                   "(计划编号 TEXT PRIMARY KEY, "
+                   "起始日期 TEXT, "
+                   "结束日期 TEXT);");
+    }
+    if (!db.tables().contains("stocks_of_plans")) {
+        query.exec("CREATE TABLE stocks_of_plans "
+                   "(计划编号 TEXT, "
+                   "存货编号 TEXT, "
+                   "工单号 TEXT);");
+    }
+    if (!db.tables().contains("cells_of_plans")) {
+        query.exec("CREATE TABLE cells_of_plans "
+                   "(计划编号 TEXT, "
+                   "时间序号 INTEGER, "
+                   "存货编号 TEXT, "
+                   "工单号 TEXT, "
+                   "计划数量 INTEGER, "
+                   "设备编号 TEXT, "
+                   "工序序号 INTEGER, "
+                   "计划时间 REAL, "
+                   "实际时间 REAL, "
+                   "选中状态 INTEGER, "
+                   "PRIMARY KEY (计划编号, 时间序号, 存货编号, 工单号, 工序序号));");
+    }
 }
 
 
@@ -154,6 +181,24 @@ QStringList SqlOP::getStepsOrderOfTech(QString tech)
         while(q.next()) {
             l<<q.value(0).toString(); 
         } 
+    }
+    return l;
+}
+
+QStringList SqlOP::getStepsOrderOfStock(QString stock_id, QString work_order)
+{
+    QSqlQuery q(db);
+    QString strSql = "SELECT 工序名称 FROM techs WHERE 工艺名称 = (SELECT 工艺 FROM stocks WHERE 存货编号 = '" 
+        + stock_id + "' AND 工单号 = '" + work_order + "') ORDER BY 次序";
+    QStringList l;
+
+    bool ret = q.exec(strSql);
+    if(!ret) {
+       qDebug()<< q.lastError().text(); 
+    } else {
+        while(q.next()) {
+            l << q.value(0).toString();
+        }
     }
     return l;
 }
@@ -706,7 +751,7 @@ bool SqlOP::updateTech(QString old_name, QString new_name, QStringList info)
             bool ret = q.exec("INSERT INTO techs VALUES('" + 
                 new_name + "', '" + 
                 info[i] + 
-                "', " + QString::number(i + 1) + ");");
+                "', " + QString::number(i) + ");");
             if(!ret) {
                 qDebug()<< q.lastError().text();
                 QMessageBox::information(nullptr, "提示", "插入失败");
@@ -770,7 +815,7 @@ bool SqlOP::updateTech(QString old_name, QString new_name, QStringList info)
         // 插入新的工艺
         for (int i = 0; i < info.size(); i++) {
             ret = q.exec("INSERT INTO techs VALUES('" + new_name + "', '" 
-                + info[i] + "', " + QString::number(i + 1) + ");");
+                + info[i] + "', " + QString::number(i) + ");");
             if(!ret) {
                 qDebug()<< q.lastError().text();
                 QMessageBox::information(nullptr, "提示", "更新失败");
@@ -860,6 +905,167 @@ bool SqlOP::deleteTech(QString tech_name)
         qDebug()<< q.lastError().text();
         QMessageBox::information(nullptr, "提示", "删除失败");
         return false;
+    }
+    return true;
+}
+
+
+
+
+
+QStringList SqlOP::getDatesOfPlan(QString plan_id)
+{
+    QSqlQuery q(db);
+    QString strSql = "SELECT 起始日期, 结束日期 FROM plans WHERE 计划编号 = '" + plan_id + "'";
+    QStringList l;
+
+    bool ret = q.exec(strSql);
+    if(!ret) {
+       qDebug()<< q.lastError().text(); 
+    } else {
+        while(q.next()) {
+            l<<q.value(0).toString();
+            l<<q.value(1).toString();
+        }
+    }
+    return l;
+}
+
+QVector<QStringList> SqlOP::getStocksOfPlan(QString plan_id)
+{
+    // 存货编号、工单号、交货期限、工艺名称、计划数量
+    QSqlQuery q(db);
+    QString strSql = "SELECT s.存货编号, s.工单号, s.交货期限, s.工艺, s.计划数量 FROM stocks_of_plans sop "
+                     "JOIN stocks s ON sop.存货编号 = s.存货编号 AND sop.工单号 = s.工单号 "
+                     "WHERE sop.计划编号 = '" + plan_id + "' ORDER BY s.交货期限";
+    QVector<QStringList> vec;
+
+    bool ret = q.exec(strSql);
+    if(!ret) {
+       qDebug()<< q.lastError().text();
+    } else {
+        //一共多少列
+        int iCols = q.record().count();
+        //每次都读取一行数据
+        QStringList l;
+        while(q.next()) {
+            l.clear();
+            for(int i =0;i<iCols;i++) {
+                l<<q.value(i).toString();
+            }
+            vec.push_back(l);
+        }
+    }
+    return vec;
+}
+
+// 每个QStringList中按顺序存放：时间序号 计划数量  设备编号  工序名称  计划时间 实际时间  选中状态
+QVector<QStringList> SqlOP::getPlanOfStock(QString plan_id, QString stock_id, QString work_order)
+{
+    QSqlQuery q(db);
+    QString strSql = "SELECT 时间序号, 计划数量, 设备编号, 工序序号, 计划时间, 实际时间, 选中状态 FROM cells_of_plans "
+                     "WHERE 计划编号 = '" + plan_id + "' AND 存货编号 = '" + stock_id + "' AND 工单号 = '" + work_order + "' "
+                     "ORDER BY 时间序号";
+    QVector<QStringList> vec;
+
+    bool ret = q.exec(strSql);
+    if(!ret) {
+       qDebug()<< q.lastError().text();
+    } else {
+        //一共多少列
+        int iCols = q.record().count();
+        //每次都读取一行数据
+        QStringList l;
+        while(q.next()) {
+            l.clear();
+            for(int i =0;i<iCols;i++) {
+                l<<q.value(i).toString();
+            }
+            vec.push_back(l);
+        }
+    }
+    return vec;
+}
+
+
+bool SqlOP::updatePlan(QString plan_id, QVector<QStringList> info)
+{
+    QSqlQuery q(db);
+
+    // 先删除旧的plan
+    QString strSql = "DELETE FROM cells_of_plans WHERE 计划编号 = '" + plan_id + "'";
+    bool ret = q.exec(strSql);
+    if(!ret) {
+        qDebug()<< q.lastError().text();
+        QMessageBox::information(nullptr, "提示", "更新失败");
+        return false;
+    }
+
+    // 插入新的plan
+    for (int i = 0; i < info.size(); i++) {
+        QStringList l = info[i];
+        /*
+        计划编号 TEXT,
+        时间序号 INTEGER,
+        存货编号 TEXT,
+        工单号 TEXT,
+        计划数量 INTEGER,
+        设备编号 TEXT,
+        工序序号 INTEGER,
+        计划时间 TEXT,
+        实际时间 REAL,
+        选中状态 INTEGER,
+        */
+        strSql = "INSERT INTO cells_of_plans VALUES('" + plan_id + "', " + l[0] + ", '" 
+            + l[1] + "', '" + l[2] + "', " + l[3] + ", '" + l[4] + "', " + l[5] + ", '" 
+            + l[6] + "', " + l[7] + ", " + l[8] + ")";
+        ret = q.exec(strSql);
+        if(!ret) {
+            qDebug()<< q.lastError().text();
+            QMessageBox::information(nullptr, "提示", "更新失败");
+            return false;
+        }
+    }
+    return true;
+}
+
+
+bool SqlOP::createPlan(QString plan_id, QStringList dates, QVector<QStringList> stock_infos)
+{
+    QSqlQuery q(db);
+
+    // 先检查plan_id是否已存在
+    QString strSql = "SELECT * FROM plans WHERE 计划编号 = '" + plan_id + "'";
+    bool ret = q.exec(strSql);
+    if(!ret) {
+        qDebug()<< q.lastError().text();
+        QMessageBox::information(nullptr, "提示", "创建失败");
+        return false; 
+    } 
+    if (q.next()) {
+        QMessageBox::information(nullptr, "提示", "计划编号已存在");
+        return false; 
+    }
+
+    // 插入plan
+    strSql = "INSERT INTO plans VALUES('" + plan_id + "', '" + dates[0] + "', '" + dates[1] + "')";
+    ret = q.exec(strSql);
+    if(!ret) {
+        qDebug()<< q.lastError().text();
+        QMessageBox::information(nullptr, "提示", "创建失败");
+        return false;
+    }
+
+    // 插入stocks_of_plans
+    for (int i = 0; i < stock_infos.size(); i++) {
+        QStringList l = stock_infos[i];
+        strSql = "INSERT INTO stocks_of_plans VALUES('" + plan_id + "', '" + l[0] + "', '" + l[1] + "')";
+        ret = q.exec(strSql);
+        if(!ret) {
+            qDebug()<< q.lastError().text();
+            QMessageBox::information(nullptr, "提示", "创建失败");
+            return false;
+        } 
     }
     return true;
 }

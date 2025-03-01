@@ -758,6 +758,7 @@ void MainWindow::on_btn_cancel_tech_clicked()
     update_techs();
 }
 
+
 void MainWindow::on_btn_del_tech_clicked()
 {
     int row = ui->techs->currentRow();

@@ -4,7 +4,8 @@
         "xstring": "cpp",
         "xutility": "cpp",
         "utility": "cpp",
-        "type_traits": "cpp"
+        "type_traits": "cpp",
+        "atomic": "cpp"
     },
     "marscode.codeCompletionPro": {
         "enableCodeCompletionPro": false

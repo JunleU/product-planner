@@ -17,20 +17,27 @@ public:
     Cell() = default;
     ~Cell() = default;
     
-    QVector<QString> steps; // 工序
+    QVector<int> steps_id; // 工序时间序号
     QVector<QString> equips; // 设备编号
     QVector<int> nums; // 加工数量
     QVector<double> costs; // 加工时间
+    QVector<double> real_costs; // 实际加工时间
+
+    QVector<int> status; // 选中状态（默认为未选中-0, 选中-1）
+    QVector<int> remain_nums; // 存储当前单元开始前各工序的待加工数量
 };
 
 
+class PlanManager;
 
 // 负荷管理
 class LoadManager
 {
 public:
-
     LoadManager(QDate beg, QDate end);
+
+    LoadManager(PlanManager *plan_manager);
+
     ~LoadManager() = default;
 
     // 获取某时间单位某工序最小负荷的设备编号和负荷
@@ -41,6 +48,8 @@ public:
     double getRateOfEquip(QString equip_id);
     
     void addLoad(int pos, QString equip, double load);
+
+    void clearLoads();
 
     QVector<QMap<QString, double>> getLoads()
     { return loads; }
@@ -58,16 +67,24 @@ private:
 // 计划管理
 class PlanManager
 {
+friend class LoadManager;
+
 public:
-    PlanManager(QDate beg, QDate end);
+    PlanManager(QString plan_id);
     ~PlanManager()
     {
         delete load_manager; 
     }
 
-    void makePlan();
+    void loadPlan();
 
-    void changePlan(QString stock_id, QString word_order, int pos, QString step, int num);
+    void updatePlan();
+
+    void updatePlanChecked(int date_id, int row, int status, int step_id, QStringList info);
+
+    void savePlan();
+
+    // void changePlan(QString stock_id, QString word_order, int pos, QString step, int num);
 
     QVector<QVector<Cell>> getPlans()
     { return plans; }
@@ -78,14 +95,22 @@ public:
     QVector<QMap<QString, double>> getLoads()
     { return load_manager->getLoads(); }
 
+    QDate getBeg()
+    { return beg; }
+
+    QDate getEnd()
+    { return end; }
+
 private:
+    QString plan_id;
     QDate beg, end;
     int length;
 
     QVector<QVector<Cell>> plans; // 每个存货的在每个时间单元的生产信息，按交货期限排序
-    QVector<QStringList> stocks_infos;  // 存货编号、工单号、交货期限、工艺名称
+    QVector<QStringList> stocks_infos;  // 存货编号、工单号、交货期限、工艺名称、计划数量
 
     LoadManager *load_manager;
+
 };
 
 

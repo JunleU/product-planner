@@ -33,7 +33,7 @@
        <enum>QTabWidget::TabShape::Rounded</enum>
       </property>
       <property name="currentIndex">
-       <number>0</number>
+       <number>2</number>
       </property>
       <widget class="QWidget" name="tab">
        <attribute name="title">
@@ -289,32 +289,14 @@
          <widget class="QWidget" name="widget_4" native="true">
           <layout class="QHBoxLayout" name="horizontalLayout">
            <item>
-            <widget class="QLabel" name="label">
+            <widget class="QPushButton" name="pushButton">
              <property name="text">
-              <string>起始时间</string>
+              <string>管理</string>
              </property>
             </widget>
            </item>
            <item>
-            <widget class="QDateEdit" name="date_beg">
-             <property name="calendarPopup">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QLabel" name="label_2">
-             <property name="text">
-              <string>截止时间</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QDateEdit" name="date_end">
-             <property name="calendarPopup">
-              <bool>true</bool>
-             </property>
-            </widget>
+            <widget class="QComboBox" name="comboBox"/>
            </item>
            <item>
             <spacer name="horizontalSpacer">
@@ -337,16 +319,9 @@
             </widget>
            </item>
            <item>
-            <widget class="QPushButton" name="pushButton_10">
+            <widget class="QPushButton" name="pushButton_2">
              <property name="text">
-              <string>导出负荷</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="pushButton_11">
-             <property name="text">
-              <string>导出计划</string>
+              <string>导出</string>
              </property>
             </widget>
            </item>

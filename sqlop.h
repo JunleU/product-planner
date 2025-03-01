@@ -34,6 +34,9 @@ public:
     // 返回指定工艺的完整工序顺序
     QStringList getStepsOrderOfTech(QString tech);
 
+    // 返回指定存货的工艺的完整工序顺序
+    QStringList getStepsOrderOfStock(QString stock_id, QString work_order);
+
     // 返回指定工艺的所有工序名称，不重复
     QStringList getStepsOfTech(QString tech);
 
@@ -90,6 +93,24 @@ public:
 
     // 删除工艺信息
     bool deleteTech(QString tech_name);
+
+
+// 以下是计划数据操作
+
+    // 获取起止时间
+    QStringList getDatesOfPlan(QString plan_id);
+
+    // 获取计划涉及的所有存货信息
+    QVector<QStringList> getStocksOfPlan(QString plan_id);
+
+    // 获取计划中某存货的单元时间计划
+    QVector<QStringList> getPlanOfStock(QString plan_id, QString stock_id, QString work_order);
+
+
+    bool updatePlan(QString plan_id, QVector<QStringList> info);
+    
+
+    bool createPlan(QString plan_id, QStringList dates, QVector<QStringList> stock_infos);
 
 
 private:

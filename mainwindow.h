@@ -2,12 +2,17 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QLabel>
+#include <QDateEdit>
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
 class MainWindow;
 }
 QT_END_NAMESPACE
+
+class PlanManager;
+class Cell;
 
 class MainWindow : public QMainWindow
 {
@@ -85,6 +90,20 @@ private:
     void update_techs();
     void update_steps();
     void update_stocks();
+
+    void update_plans();
+    void update_loads();
+
+    QVector<int> editing_plan_pos; // row, col
+    // QStringList editing_plan_info;
+
+    void on_plans_cell_clicked(int row, int col, QVector<int> old_info, double old_cost, QString equip_id);
+
+    PlanManager *plan_manager;
+
+    QVector<QVector<Cell>> plans_data;
+
+    // QVector<int> begin_row; // 每个存货的开始行号
 
 };
 #endif // MAINWINDOW_H

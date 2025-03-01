@@ -15,8 +15,8 @@ MainWindow::MainWindow(QWidget *parent)
     ui->setupUi(this);
 
     // 设置日期控件显示值，默认为当前日期
-    ui->date_beg->setDate(QDate::currentDate());
-    ui->date_end->setDate(QDate::currentDate());
+    // ui->date_beg->setDate(QDate::currentDate());
+    // ui->date_end->setDate(QDate::currentDate());
 
     // ui->stocks->setEditTriggers(QAbstractItemView::SelectedClicked);
     // ui->stocks->setEditTriggers(QAbstractItemView::NoEditTriggers);
@@ -26,6 +26,8 @@ MainWindow::MainWindow(QWidget *parent)
     update_steps();
     update_stocks();
 
+    plan_manager = nullptr;
+
     //checkTable();
 }
 
@@ -33,6 +35,5 @@ MainWindow::~MainWindow()
 {
     delete ui;
 }
-
 
 
