@@ -28,6 +28,8 @@ MainWindow::MainWindow(QWidget *parent)
 
     plan_manager = nullptr;
 
+    update_plan_info("");
+
     //checkTable();
 }
 

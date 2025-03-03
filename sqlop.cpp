@@ -289,6 +289,25 @@ QVector<QStringList> SqlOP::getStocksByDate(QString attrs)
     return vec;
 }
 
+QStringList SqlOP::getStockInfo(QString stock_id, QString work_order, QString attrs)
+{
+    QSqlQuery q(db);
+    QString strSql = "SELECT " + attrs + " FROM stocks WHERE 存货编号 = '" + stock_id + "' AND 工单号 = '" + work_order + "'";
+    QStringList l;
+
+    bool ret = q.exec(strSql);
+    if(!ret) {
+       qDebug()<< q.lastError().text(); 
+    } else {
+        while(q.next()) {
+            for(int i = 0; i < q.record().count(); i++) {
+                l<<q.value(i).toString();
+            }
+        }
+    }
+    return l;
+}
+
 QString SqlOP::getTechParam(QString stock_id, QString work_order, QString step)
 {
     QSqlQuery q(db);
@@ -835,7 +854,7 @@ bool SqlOP::updateTech(QString old_name, QString new_name, QStringList info)
 
         }
 
-        if (flag) {
+        if (flag) { // TODO: 用SQL语句优化
             // 选择该工艺下的所有存货，删除这些存货的不在新工艺中的工序的tech_params
             strSql = "DELETE FROM tech_params WHERE "
                 "(存货编号, 工单号) IN (SELECT 存货编号, 工单号 FROM stocks WHERE 工艺 = '" + new_name + "') "
@@ -911,6 +930,24 @@ bool SqlOP::deleteTech(QString tech_name)
 
 
 
+
+QStringList SqlOP::getPlanIds()
+{
+    QSqlQuery q(db);
+    QString strSql = "SELECT 计划编号 FROM plans ORDER BY 计划编号";
+    QStringList l;
+
+    bool ret = q.exec(strSql);
+    if(!ret) {
+       qDebug()<< q.lastError().text(); 
+    } else {
+        //每次都读取一行数据
+        while(q.next()) {
+            l<<q.value(0).toString();
+        }
+    }
+    return l;
+}
 
 
 QStringList SqlOP::getDatesOfPlan(QString plan_id)
@@ -1030,6 +1067,45 @@ bool SqlOP::updatePlan(QString plan_id, QVector<QStringList> info)
 }
 
 
+bool SqlOP::updatePlanStocks(QString plan_id, QVector<QStringList> stock_infos)
+{
+    QSqlQuery q(db);
+
+    // 先删除旧的stocks_of_plans
+    QString strSql = "DELETE FROM stocks_of_plans WHERE 计划编号 = '" + plan_id + "'";
+    bool ret = q.exec(strSql);
+    if(!ret) {
+        qDebug()<< q.lastError().text();
+        QMessageBox::information(nullptr, "提示", "更新失败");
+        return false;
+    }
+
+    // 插入新的stocks_of_plans
+    for (int i = 0; i < stock_infos.size(); i++) {
+        QStringList l = stock_infos[i];
+        strSql = "INSERT INTO stocks_of_plans VALUES('" + plan_id + "', '" + l[0] + "', '" + l[1] + "')";
+        ret = q.exec(strSql);
+        if(!ret) {
+            qDebug()<< q.lastError().text();
+            QMessageBox::information(nullptr, "提示", "更新失败");
+            return false;
+        }
+    }
+    
+
+    // 更新cells_of_plans
+    // 删除没有在stock_infos中的存货的计划
+    strSql = "DELETE FROM cells_of_plans WHERE 计划编号 = '" + plan_id + "' AND (存货编号, 工单号) NOT IN ("
+            " SELECT 存货编号, 工单号 FROM stocks_of_plans WHERE 计划编号 = '" + plan_id + "')";
+    ret = q.exec(strSql);
+    if(!ret) {
+        qDebug()<< q.lastError().text();
+        QMessageBox::information(nullptr, "提示", "更新失败");
+        return false;
+    }
+
+}
+
 bool SqlOP::createPlan(QString plan_id, QStringList dates, QVector<QStringList> stock_infos)
 {
     QSqlQuery q(db);
@@ -1070,6 +1146,48 @@ bool SqlOP::createPlan(QString plan_id, QStringList dates, QVector<QStringList> 
     return true;
 }
 
+
+bool SqlOP::isPlanExist(QString plan_id)
+{
+    QSqlQuery q(db);
+    QString strSql = "SELECT * FROM plans WHERE 计划编号 = '" + plan_id + "'";
+    bool ret = q.exec(strSql);
+    if(!ret) {
+        qDebug()<< q.lastError().text();
+        return false;
+    }
+    return q.next();
+}
+
+
+bool SqlOP::deletePlan(QString plan_id)
+{
+    QSqlQuery q(db);
+    QString strSql = "DELETE FROM plans WHERE 计划编号 = '" + plan_id + "'";
+    bool ret = q.exec(strSql);
+    if(!ret) {
+        qDebug()<< q.lastError().text();
+        QMessageBox::information(nullptr, "提示", "删除失败");
+        return false;
+    }
+
+    strSql = "DELETE FROM stocks_of_plans WHERE 计划编号 = '" + plan_id + "'";
+    ret = q.exec(strSql);
+    if(!ret) {
+        qDebug()<< q.lastError().text();
+        QMessageBox::information(nullptr, "提示", "删除失败");
+        return false;
+    }
+
+    strSql = "DELETE FROM cells_of_plans WHERE 计划编号 = '" + plan_id + "'";
+    ret = q.exec(strSql);
+    if(!ret) {
+        qDebug()<< q.lastError().text();
+        QMessageBox::information(nullptr, "提示", "删除失败");
+        return false;
+    }
+    return true;
+}
 
 // DEBUG
 void checkTable()

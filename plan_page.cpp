@@ -7,6 +7,14 @@
 #include <QComboBox>
 #include <QSpinBox>
 #include <QCheckBox>
+#include <QToolButton>
+
+#include <QFileDialog>
+
+#include "dialogmanplans.cpp"
+#include "dialogselectstocks.cpp"
+
+#include "output.h"
 
 
 void MainWindow::update_plans()
@@ -18,6 +26,8 @@ void MainWindow::update_plans()
     int diff = beg.daysTo(end);
 
     plans_data = plan_manager->getPlans(); // TODO: 分离
+    if (plans_data.size() == 0) 
+        return;
     QVector<QStringList> stocks_infos = plan_manager->getStocksInfos();
 
     // 关闭表格行头、列头
@@ -84,6 +94,7 @@ void MainWindow::update_plans()
                 layout->addWidget(btn1);
                 // 只显示文本，不显示背景色，不显示边框，不显示焦点
                 btn1->setFlat(true);
+                btn1->setStyleSheet("background-color: transparent; focus: none;");
 
                 QCheckBox *checkbox = new QCheckBox(this);
                 if (plans_data[i][j].status[k] == 1) {
@@ -164,7 +175,10 @@ void MainWindow::update_plans()
                 // 放入一个文本按钮
                 btn = new QPushButton(this);
                 btn->setText(QString::number(plans_data[i][j].real_costs[k]));
+                // btn->setStyleSheet("background-color: transparent; border: none; focus: none;");
+                // 只显示文本，不显示背景色，不显示边框，不显示焦点
                 btn->setFlat(true);
+                btn->setStyleSheet("background-color: transparent; focus: none;");
                 
                 ui->plans->setCellWidget(last_row + 3 + k * 3, j + 3, btn);
 
@@ -212,7 +226,8 @@ void MainWindow::on_plans_cell_clicked(int row, int col, QVector<int> old_info, 
     // 第二行为水平布局的两个ComboxBox
     // 第三行为水平布局的一个Double spinbox
 
-    QGridLayout *layout1 = new QGridLayout(this);
+    // QGridLayout *layout1 = new QGridLayout(this);
+    QHBoxLayout *layout1 = new QHBoxLayout(this);
 
     QSpinBox *spinbox = new QSpinBox(this);
 
@@ -221,19 +236,40 @@ void MainWindow::on_plans_cell_clicked(int row, int col, QVector<int> old_info, 
     spinbox->setSingleStep(1);
     spinbox->setValue(old_info[4]);
 
+    // 不显示箭头
+    spinbox->setButtonSymbols(QAbstractSpinBox::NoButtons);
+    // 无边框
+    spinbox->setFrame(false);
+    spinbox->setStyleSheet("border: none;");
+
+
     // 一个绿色的对号
     QPushButton *ok = new QPushButton(this);
     ok->setText("✓");
-    ok->setStyleSheet("color: green;");
+    // 设置字体颜色为绿色，无背景色，大小为16，鼠标停留时显示焦点
+    // 按钮有边框，大小为14(border: none; )
+    ok->setFlat(true);
+    ok->setStyleSheet("color: green; background-color: transparent; font-size: 15px; focus: true;");
+    //ok->setFixedSize(20, 20);
+    // 宽度为字体大小，高度为单元格高度
+    ok->setFixedSize(19, 19);
+
 
     // 一个红色的叉号
     QPushButton *cancel = new QPushButton(this);
     cancel->setText("✗");
-    cancel->setStyleSheet("color: red;");
+    cancel->setFlat(true);
+    cancel->setStyleSheet("color: red; background-color: transparent; font-size: 15px; focus: true;");
+    //cancel->setFixedSize(20, 20);
+    cancel->setFixedSize(19, 19);
 
-    layout1->addWidget(spinbox, 0, 0, 1, 2);
-    layout1->addWidget(ok, 1, 0);
-    layout1->addWidget(cancel, 1, 1);
+
+    //layout1->addWidget(spinbox, 0, 0, 1, 2);
+    //layout1->addWidget(ok, 1, 0);
+    //layout1->addWidget(cancel, 1, 1);
+    layout1->addWidget(spinbox);
+    layout1->addWidget(ok);
+    layout1->addWidget(cancel);
 
     layout1->setSpacing(0);
     layout1->setContentsMargins(0,0,0,0);
@@ -244,9 +280,9 @@ void MainWindow::on_plans_cell_clicked(int row, int col, QVector<int> old_info, 
     ui->plans->setCellWidget(row, col, widget);
 
     
-    // 竖直布局的两个ComboBox
-    QVBoxLayout *layout2 = new QVBoxLayout(this);
-    QComboBox *step = new QComboBox(this);
+    //
+    QHBoxLayout *layout2 = new QHBoxLayout(this);
+    QToolButton *step = new QToolButton(this);
     QComboBox *equip = new QComboBox(this);
     layout2->addWidget(step);
     layout2->addWidget(equip);
@@ -261,30 +297,48 @@ void MainWindow::on_plans_cell_clicked(int row, int col, QVector<int> old_info, 
 
     // step取工艺的步骤名称+序号
     QStringList steps = SqlOP::getInstance()->getStepsOrderOfStock(stock_id, work_order);
+   
+    // step是一个QToolButton，点击后弹出一个菜单
+    step->setText(QString::number(old_info[3]+1));
+
+    QMenu *menu = new QMenu(this);
     for (int i = 0; i < steps.size(); i++) {
-        step->addItem(steps[i] + "(" + QString::number(i + 1) + ")");
+        menu->addAction(QString::number(i+1) + ":" + steps[i]);
     }
-    // 初始化第editing_plan_info[3]个
-    step->setCurrentIndex(old_info[3]);
+    // 关闭图标栏 padding-left:2px, 高度为25
+    menu->setStyleSheet("QMenu::item{padding-left:2px;height:25px;}");
 
-    // 获取设备编号
-    QStringList equips = SqlOP::getInstance()->getEquipmentsOfStep(steps[step->currentIndex()]);
-    for (int i = 0; i < equips.size(); i++) {
-        equip->addItem(equips[i]);
-    }
-    // 初始化为equip_id
-    equip->setCurrentText(equip_id);
 
-    connect(step, &QComboBox::currentIndexChanged, [=](){
-        QStringList equips = SqlOP::getInstance()->getEquipmentsOfStep(steps[step->currentIndex()]);
+    step->setMenu(menu);
+    // 设置模式
+    step->setPopupMode(QToolButton::InstantPopup);
+
+
+    // 如果菜单项被点击，设置step的文本
+    connect(menu, &QMenu::triggered, [=](QAction *action){
+        QString text = action->text()[0];
+        step->setText(text);
+
+        QStringList equips = SqlOP::getInstance()->getEquipmentsOfStep(steps[text.toInt()-1]);
         equip->clear();
         for (int i = 0; i < equips.size(); i++) {
             equip->addItem(equips[i]);
         }
     });
 
+
+    // 获取设备编号
+    QStringList equips = SqlOP::getInstance()->getEquipmentsOfStep(steps[old_info[3]]);
+    for (int i = 0; i < equips.size(); i++) {
+        equip->addItem(equips[i]);
+    }
+    // 初始化为equip_id
+    equip->setCurrentText(equip_id);
+
+    
+
     // 调整行高
-    ui->plans->resizeRowsToContents();
+    // ui->plans->resizeRowsToContents();
 
 
     //layout = new QHBoxLayout(this);
@@ -304,7 +358,7 @@ void MainWindow::on_plans_cell_clicked(int row, int col, QVector<int> old_info, 
         int step_id = old_info[3];
 
         plan_manager->updatePlanChecked(date_id, stock_row, 1, step_id,
-                                        QStringList() << QString::number(step->currentIndex()) << equip->currentText() <<
+                                        QStringList() << QString::number(step->text().toInt()-1) << equip->currentText() <<
                                             QString::number(spinbox->value()) << QString::number(cost->value()));
 
         // 更新表格
@@ -410,32 +464,103 @@ void MainWindow::update_loads()
 }
 
 
+// 更新comb_plan_id
+void MainWindow::update_plan_info(QString init_plan_id = "")
+{
+    QStringList plan_ids = SqlOP::getInstance()->getPlanIds();
+    ui->comb_plan_id->clear();
+    for (int i = 0; i < plan_ids.size(); i++) {
+        ui->comb_plan_id->addItem(plan_ids[i]);
+    }
+    if (init_plan_id.isEmpty()) {
+        ui->comb_plan_id->setCurrentIndex(0);
+    } else {
+        ui->comb_plan_id->setCurrentText(init_plan_id);
+    }
+    // on_comb_plan_id_currentTextChanged(ui->comb_plan_id->currentText());
+}
+
 void MainWindow::on_btn_update_plan_clicked()
 {
     // DEGUB
     if (plan_manager) return;
 
-    QString plan_id = "202503";
- /*   QVector<QStringList> stocks = SqlOP::getInstance()->getStocks();
-    // 取存货编号和工单
-    QVector<QStringList> stock_info = QVector<QStringList>();
-    for (int i = 0; i < stocks.size(); i++) {
-        stock_info << (QStringList() << stocks[i][0] << stocks[i][5]);
+    QStringList plan_ids = SqlOP::getInstance()->getPlanIds();
+    ui->comb_plan_id->clear();
+
+    for (int i = 0; i < plan_ids.size(); i++) {
+        ui->comb_plan_id->addItem(plan_ids[i]);
     }
-
-    QString beg = "2025-03-01";
-    QString end = "2025-03-31";
-    QStringList dates;
-    dates << beg << end;
-    SqlOP::getInstance()->createPlan(plan_id, dates, stock_info);
-*/
-    plan_manager = new PlanManager(plan_id);
-
-    plan_manager->updatePlan();
-
-    update_plans();
-    update_loads();
-    
+    // ui->comb_plan_id->setCurrentIndex(0);
 }
 
 
+void MainWindow::on_comb_plan_id_currentTextChanged(const QString &arg1)
+{
+    QString plan_id = arg1;
+    if (plan_id.isEmpty()) return;
+
+    delete this->plan_manager;
+    this->plan_manager = new PlanManager(plan_id);
+
+    QString beg = plan_manager->getBeg().toString("yyyy-MM-dd");
+    QString end = plan_manager->getEnd().toString("yyyy-MM-dd");
+
+    ui->label_date->setText(beg + " ~ " + end);
+
+    plan_manager->updatePlan();
+    update_plans();
+    update_loads();
+}
+
+
+
+void MainWindow::on_btn_creat_plan_clicked()
+{
+    DialogSelectStocks *dialog = new DialogSelectStocks(this);
+    dialog->setMode(0);
+    dialog->setPlanId("");
+    // 如果accept，更新ComboBox
+    if (dialog->exec() == QDialog::Accepted) {
+        update_plan_info();
+    }
+}
+
+
+void MainWindow::on_btn_man_plan_clicked()
+{
+    DialogManPlans *dialog = new DialogManPlans(this);
+    dialog->exec();
+    
+    QString cur_plan_id = ui->comb_plan_id->currentText();
+    
+    update_plan_info(cur_plan_id);
+}
+
+
+void MainWindow::on_btn_output_clicked()
+{
+    if (plan_manager == nullptr) {
+        QMessageBox::information(nullptr, "提示", "请先选择计划");
+        return;
+    }
+
+    if (!editing_plan_pos.isEmpty()) {
+        QMessageBox::information(nullptr, "提示", "请先完成编辑");
+        return;
+    }
+    
+    QString fileName = QFileDialog::getSaveFileName(this, QObject::tr("Save as..."),
+                                                    QString(), QObject::tr("EXCEL files (*.xlsx *.xls)"));
+
+    if (output_xlsx(fileName) == 0) {
+        if (QMessageBox::question(NULL,"完成","文件已经导出，是否现在打开？",
+                QMessageBox::Yes|QMessageBox::No)==QMessageBox::Yes)
+        {
+            QDesktopServices::openUrl(QUrl("file:///" + QDir::toNativeSeparators(fileName)));
+        }
+    } else {
+        QMessageBox::information(nullptr, "提示", "导出失败");
+    }
+    
+}

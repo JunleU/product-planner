@@ -49,6 +49,9 @@ public:
     // 返回指定属性的所有存货信息，按交货期限排序
     QVector<QStringList> getStocksByDate(QString attrs);
 
+    // 返回指定存货的指定信息
+    QStringList getStockInfo(QString stock_id, QString work_order, QString attrs);
+
     // 返回指定存货的指定工序的参数
     QString getTechParam(QString stock_id, QString work_order, QString step);
 
@@ -97,6 +100,9 @@ public:
 
 // 以下是计划数据操作
 
+    // 获取所有计划信息
+    QStringList getPlanIds();
+
     // 获取起止时间
     QStringList getDatesOfPlan(QString plan_id);
 
@@ -108,9 +114,15 @@ public:
 
 
     bool updatePlan(QString plan_id, QVector<QStringList> info);
+
+    bool updatePlanStocks(QString plan_id, QVector<QStringList> stock_infos);
     
 
     bool createPlan(QString plan_id, QStringList dates, QVector<QStringList> stock_infos);
+
+    bool isPlanExist(QString plan_id);
+
+    bool deletePlan(QString plan_id);
 
 
 private:

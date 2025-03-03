@@ -5,7 +5,9 @@
         "xutility": "cpp",
         "utility": "cpp",
         "type_traits": "cpp",
-        "atomic": "cpp"
+        "atomic": "cpp",
+        "format": "cpp",
+        "ostream": "cpp"
     },
     "marscode.codeCompletionPro": {
         "enableCodeCompletionPro": false

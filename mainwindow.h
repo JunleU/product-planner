@@ -70,6 +70,14 @@ private slots:
 
     void on_btn_del_tech_clicked();
 
+    void on_comb_plan_id_currentTextChanged(const QString &arg1);
+
+    void on_btn_creat_plan_clicked();
+
+    void on_btn_man_plan_clicked();
+
+    void on_btn_output_clicked();
+
 private:
     Ui::MainWindow *ui;
 
@@ -94,6 +102,8 @@ private:
     void update_plans();
     void update_loads();
 
+    void update_plan_info(QString init_plan_id);
+
     QVector<int> editing_plan_pos; // row, col
     // QStringList editing_plan_info;
 
@@ -104,6 +114,8 @@ private:
     QVector<QVector<Cell>> plans_data;
 
     // QVector<int> begin_row; // 每个存货的开始行号
+
+    int output_xlsx(QString plan_id);
 
 };
 #endif // MAINWINDOW_H
