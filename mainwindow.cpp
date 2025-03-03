@@ -30,6 +30,9 @@ MainWindow::MainWindow(QWidget *parent)
 
     update_plan_info("");
 
+    ui->plans->setContextMenuPolicy(Qt::CustomContextMenu);//设置右击菜单
+    connect(ui->plans, &QTableWidget::customContextMenuRequested, this, &MainWindow::on_plan_show_menu);
+
     //checkTable();
 }
 

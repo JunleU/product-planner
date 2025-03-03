@@ -78,6 +78,8 @@ private slots:
 
     void on_btn_output_clicked();
 
+    void on_plan_show_menu(const QPoint &pos);
+
 private:
     Ui::MainWindow *ui;
 
@@ -94,6 +96,8 @@ private:
     QString editing_tech_name;
     QStringList editing_tech_info;
 
+    QStringList added_stock_info; // 用于保存新增计划行的存货信息
+
     void update_equips();
     void update_techs();
     void update_steps();
@@ -108,6 +112,7 @@ private:
     // QStringList editing_plan_info;
 
     void on_plans_cell_clicked(int row, int col, QVector<int> old_info, double old_cost, QString equip_id);
+    void plain_plan_cell_clicked(int row, int col);
 
     PlanManager *plan_manager;
 
