@@ -303,6 +303,25 @@
             </widget>
            </item>
            <item>
+            <widget class="QPushButton" name="btn_update_plan">
+             <property name="autoFillBackground">
+              <bool>false</bool>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">background-color: transparent;</string>
+             </property>
+             <property name="text">
+              <string/>
+             </property>
+             <property name="icon">
+              <iconset theme="QIcon::ThemeIcon::ViewRefresh"/>
+             </property>
+             <property name="flat">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
             <spacer name="horizontalSpacer_2">
              <property name="orientation">
               <enum>Qt::Orientation::Horizontal</enum>
@@ -354,10 +373,42 @@
             </spacer>
            </item>
            <item>
-            <widget class="QPushButton" name="btn_update_plan">
-             <property name="text">
-              <string>更新</string>
+            <widget class="QGroupBox" name="gb_olel">
+             <property name="title">
+              <string>优化等级</string>
              </property>
+             <layout class="QHBoxLayout" name="horizontalLayout_3">
+              <property name="spacing">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>2</number>
+              </property>
+              <property name="bottomMargin">
+               <number>2</number>
+              </property>
+              <item>
+               <widget class="QRadioButton" name="rbo1">
+                <property name="text">
+                 <string>o1</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QRadioButton" name="rbo2">
+                <property name="text">
+                 <string>o2</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QRadioButton" name="rbo3">
+                <property name="text">
+                 <string>o3</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
             </widget>
            </item>
            <item>

@@ -100,7 +100,6 @@ void SqlOP::init()
                    "工序序号 INTEGER, "
                    "计划时间 REAL, "
                    "实际时间 REAL, "
-                   "选中状态 INTEGER, "
                    "PRIMARY KEY (计划编号, 时间序号, 存货编号, 工单号, 工序序号));");
     }
 }
@@ -929,7 +928,7 @@ bool SqlOP::deleteTech(QString tech_name)
 }
 
 
-
+// 计划相关SQL操作
 
 QStringList SqlOP::getPlanIds()
 {
@@ -996,11 +995,11 @@ QVector<QStringList> SqlOP::getStocksOfPlan(QString plan_id)
     return vec;
 }
 
-// 每个QStringList中按顺序存放：时间序号 计划数量  设备编号  工序名称  计划时间 实际时间  选中状态
+// 每个QStringList中按顺序存放：时间序号 计划数量  设备编号  工序名称  计划时间 实际时间
 QVector<QStringList> SqlOP::getPlanOfStock(QString plan_id, QString stock_id, QString work_order)
 {
     QSqlQuery q(db);
-    QString strSql = "SELECT 时间序号, 计划数量, 设备编号, 工序序号, 计划时间, 实际时间, 选中状态 FROM cells_of_plans "
+    QString strSql = "SELECT 时间序号, 计划数量, 设备编号, 工序序号, 计划时间, 实际时间 FROM cells_of_plans "
                      "WHERE 计划编号 = '" + plan_id + "' AND 存货编号 = '" + stock_id + "' AND 工单号 = '" + work_order + "' "
                      "ORDER BY 时间序号";
     QVector<QStringList> vec;
@@ -1051,11 +1050,10 @@ bool SqlOP::updatePlan(QString plan_id, QVector<QStringList> info)
         工序序号 INTEGER,
         计划时间 TEXT,
         实际时间 REAL,
-        选中状态 INTEGER,
         */
         strSql = "INSERT INTO cells_of_plans VALUES('" + plan_id + "', " + l[0] + ", '" 
             + l[1] + "', '" + l[2] + "', " + l[3] + ", '" + l[4] + "', " + l[5] + ", '" 
-            + l[6] + "', " + l[7] + ", " + l[8] + ")";
+            + l[6] + "', " + l[7] + ")";
         ret = q.exec(strSql);
         if(!ret) {
             qDebug()<< q.lastError().text();
@@ -1103,8 +1101,9 @@ bool SqlOP::updatePlanStocks(QString plan_id, QVector<QStringList> stock_infos)
         QMessageBox::information(nullptr, "提示", "更新失败");
         return false;
     }
-
+    return true;
 }
+
 
 bool SqlOP::createPlan(QString plan_id, QStringList dates, QVector<QStringList> stock_infos)
 {

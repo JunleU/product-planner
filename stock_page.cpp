@@ -16,7 +16,7 @@ void MainWindow::update_stocks()
     ui->stocks->setColumnCount(9);
     ui->stocks->setHorizontalHeaderLabels(
         QStringList() << "存货编号" << "存货全名" << "规格" << "型号" << 
-        "工艺" << "工艺参数" << "工单号" << "计划数量" << "交货期限"); 
+        "工艺" << "工序时间" << "工单号" << "计划数量" << "交货期限"); 
     
     
 

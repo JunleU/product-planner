@@ -15,16 +15,50 @@ class Cell
 {
 public:
     Cell() = default;
+    Cell(QString equip, int num, double cost, double real_cost, int statu)
+        : equip(equip), num(num), cost(cost), real_cost(real_cost), statu(statu) {}
     ~Cell() = default;
     
-    QVector<int> steps_id; // 工序时间序号
-    QVector<QString> equips; // 设备编号
-    QVector<int> nums; // 加工数量
-    QVector<double> costs; // 加工时间
-    QVector<double> real_costs; // 实际加工时间
+    QString equip; // 设备编号
+    int num; // 加工数量
+    double cost; // 加工时间
+    double real_cost; // 实际加工时间
+    int statu; // 选中状态（默认为未选中-0, 选中-1）
+};
 
-    QVector<int> status; // 选中状态（默认为未选中-0, 选中-1）
-    QVector<int> remain_nums; // 存储当前单元开始前各工序的待加工数量
+class Period
+{
+public:
+    Period() = default;
+    ~Period() = default;
+
+    void updateCell(int step_id, QString equip, int num, double cost, double real_cost, int statu)
+    {
+        cells[step_id] = Cell(equip, num, cost, real_cost, statu);
+/* 
+        if (remain_nums.size() <= step_id + 1)
+            return;
+        remain_nums[step_id] -= num;
+        remain_nums[step_id + 1] += num;
+*/
+    }
+
+    void clearUnusedCell()
+    {
+        for (auto it = cells.begin(); it != cells.end();) {
+            if (it.value().statu) {
+                it++;
+            } else {
+                it = cells.erase(it);
+            }
+        }
+    }
+
+    QMap<int, Cell> cells; // 键为工序序号，值为Cell
+
+/*  当前算法暂时不需保存remain_nums
+    QVector<int> remain_nums; // 各工序的剩余数量
+*/
 };
 
 
@@ -80,13 +114,13 @@ public:
 
     void updatePlan();
 
-    void updatePlanChecked(int date_id, int row, int status, int step_id, QStringList info);
+    void updatePlanChecked(int date_id, int row, int status, int step_id, QStringList info = QStringList());
 
     void savePlan();
 
     // void changePlan(QString stock_id, QString word_order, int pos, QString step, int num);
 
-    QVector<QVector<Cell>> getPlans()
+    QVector<QVector<Period>> getPlans()
     { return plans; }
 
     QVector<QStringList> getStocksInfos()
@@ -101,12 +135,20 @@ public:
     QDate getEnd()
     { return end; }
 
+    void setOLevel(int o_level)
+    { this->o_level = o_level; }
+
+    int getOLevel()
+    { return o_level; }
+
 private:
     QString plan_id;
     QDate beg, end;
     int length;
 
-    QVector<QVector<Cell>> plans; // 每个存货的在每个时间单元的生产信息，按交货期限排序
+    int o_level;
+
+    QVector<QVector<Period>> plans; // 每个存货的在每个时间单元的生产信息，按交货期限排序
     QVector<QStringList> stocks_infos;  // 存货编号、工单号、交货期限、工艺名称、计划数量
 
     LoadManager *load_manager;

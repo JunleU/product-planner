@@ -4,6 +4,7 @@
 #include <QMainWindow>
 #include <QLabel>
 #include <QDateEdit>
+#include <QButtonGroup>
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -12,7 +13,7 @@ class MainWindow;
 QT_END_NAMESPACE
 
 class PlanManager;
-class Cell;
+class Period;
 
 class MainWindow : public QMainWindow
 {
@@ -80,6 +81,8 @@ private slots:
 
     void on_plan_show_menu(const QPoint &pos);
 
+    void olevel_changed(QAbstractButton* button);
+
 private:
     Ui::MainWindow *ui;
 
@@ -116,11 +119,14 @@ private:
 
     PlanManager *plan_manager;
 
-    QVector<QVector<Cell>> plans_data;
+    QVector<QVector<Period>> plans_data;
 
     // QVector<int> begin_row; // 每个存货的开始行号
 
     int output_xlsx(QString plan_id);
+
+    
+    QButtonGroup *olevel_group;
 
 };
 #endif // MAINWINDOW_H

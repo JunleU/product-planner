@@ -68,7 +68,6 @@ CREATE TABLE cells_of_plans {
     工序序号 INTEGER,
     计划时间 TEXT,
     实际时间 REAL,
-    选中状态 INTEGER,
     PRIMARY KEY (计划编号, 时间序号, 存货编号, 工单号, 工序序号)
 };
 

@@ -70,6 +70,10 @@ void MainWindow::update_plans()
         QTableWidgetItem *item = new QTableWidgetItem(QString("计划数量"));
         ui->plans->setItem(last_row + 1, 2, item);
         item->setFlags(Qt::ItemIsSelectable|Qt::ItemIsEnabled);
+        
+        item->setBackground(QColor("#92d050")); // 设置背景色为绿色
+        item->setForeground(QBrush(Qt::black));
+
         item = new QTableWidgetItem(QString("计划时间"));
         ui->plans->setItem(last_row + 2, 2, item);
         item->setFlags(Qt::ItemIsSelectable|Qt::ItemIsEnabled);
@@ -78,7 +82,7 @@ void MainWindow::update_plans()
         item->setFlags(Qt::ItemIsSelectable|Qt::ItemIsEnabled);
 
         for (int j = 0; j < plans_data[i].size(); j++) {
-            int cell_row = plans_data[i][j].steps_id.size();
+            int cell_row = plans_data[i][j].cells.size();
             if (cell_row > max_row) {
                 for (int k = 0; k < cell_row - max_row; k++) {
                     ui->plans->insertRow(last_row + max_row * 3 + 1 + k * 3);
@@ -88,6 +92,10 @@ void MainWindow::update_plans()
                     item = new QTableWidgetItem(QString("计划数量"));
                     ui->plans->setItem(last_row + max_row * 3 + 1 + k * 3, 2, item);
                     item->setFlags(Qt::ItemIsSelectable|Qt::ItemIsEnabled);
+        
+                    item->setBackground(QColor("#92d050")); // 设置背景色为绿色
+                    item->setForeground(QBrush(Qt::black));
+            
                     item = new QTableWidgetItem(QString("计划时间"));
                     ui->plans->setItem(last_row + max_row * 3 + 2 + k * 3, 2, item);
                     item->setFlags(Qt::ItemIsSelectable|Qt::ItemIsEnabled);
@@ -97,18 +105,27 @@ void MainWindow::update_plans()
                 }
                 max_row = cell_row;
             }
-            for (int k = 0; k < cell_row; k++) {
+            int k = 0;
+            for (auto it = plans_data[i][j].cells.begin(); it != plans_data[i][j].cells.end(); it++, k++) {
+                int step_id = it.key();
+                int num = it.value().num;
+                double cost = it.value().cost;
+                double real_cost = it.value().real_cost;
+                int statu = it.value().statu;
+                QString equip = it.value().equip;
+
+
                 // 左边为文本按钮，右边为CheckBox
                 QHBoxLayout *layout = new QHBoxLayout();
                 QPushButton *btn1 = new QPushButton();
-                btn1->setText(QString::number(plans_data[i][j].nums[k]));
+                btn1->setText(QString::number(num));
                 layout->addWidget(btn1);
                 // 只显示文本，不显示背景色，不显示边框，不显示焦点
                 btn1->setFlat(true);
                 btn1->setStyleSheet("background-color: transparent;");
 
                 QCheckBox *checkbox = new QCheckBox();
-                if (plans_data[i][j].status[k] == 1) {
+                if (statu) {
                     checkbox->setChecked(true);
                 } else {
                     checkbox->setChecked(false);
@@ -131,12 +148,12 @@ void MainWindow::update_plans()
                     }
                     
                     if (!state) {
-                        plan_manager->updatePlanChecked(j, i, 0, plans_data[i][j].steps_id[k], QStringList());
+                        plan_manager->updatePlanChecked(j, i, 0, step_id);
                         plan_manager->updatePlan();
                         update_plans();
                         update_loads();
                     } else {
-                        plan_manager->updatePlanChecked(j, i, 1, plans_data[i][j].steps_id[k], QStringList());
+                        plan_manager->updatePlanChecked(j, i, 1, step_id);
                     }
                 });
 
@@ -145,23 +162,20 @@ void MainWindow::update_plans()
                     if (editing_plan_pos.size() > 0) return;
                     QVector<int> old_info;
                     // int date_id, int row, int status, int step_id
-                    old_info << j << i << plans_data[i][j].status[k] << plans_data[i][j].steps_id[k]
-                            << plans_data[i][j].nums[k];
-                    QString equip_id = plans_data[i][j].equips[k];
-                    on_plans_cell_clicked(last_row + 1 + k * 3, j + 3, old_info, 
-                        plans_data[i][j].real_costs[k], equip_id);
+                    old_info << j << i << statu << step_id << num;
+                    on_plans_cell_clicked(last_row + 1 + k * 3, j + 3, old_info, real_cost, equip);
                 });
                 
                 
                 // item = new QTableWidgetItem(QString::number(plans_data[i][j].costs[k]));
 
-
                 // 放入一个文本按钮
                 QPushButton *btn = new QPushButton();
-                btn->setText(QString::number(plans_data[i][j].costs[k]));
+                // 保留两位小数
+                btn->setText(QString::number(cost, 'f', 2));
                 btn->setFlat(true);
                 // 设置背景色
-                QColor color = QColor(SqlOP::getInstance()->getColor(plans_data[i][j].equips[k]));
+                QColor color = QColor(SqlOP::getInstance()->getColor(equip));
                 double testGray = (0.299*color.red() + 0.587*color.green() + 0.114*color.blue()) / 255;
                 QColor fcolor = testGray > 0.5? Qt::black : Qt::white;
                 btn->setStyleSheet("background-color: " + color.name() + "; color: " + fcolor.name() + ";");
@@ -175,17 +189,14 @@ void MainWindow::update_plans()
                     if (editing_plan_pos.size() > 0) return;
                     QVector<int> old_info;
                     // int date_id, int row, int status, int step_id, int num
-                    old_info << j << i << plans_data[i][j].status[k] << plans_data[i][j].steps_id[k] 
-                        << plans_data[i][j].nums[k];
-                    QString equip_id = plans_data[i][j].equips[k];
-                    on_plans_cell_clicked(last_row + 1 + k * 3, j + 3, old_info, 
-                        plans_data[i][j].real_costs[k], equip_id);
+                    old_info << j << i << statu << step_id << num;
+                    on_plans_cell_clicked(last_row + 1 + k * 3, j + 3, old_info, real_cost, equip);
                 });
 
                 // QString::number(plans_data[i][j].real_costs[k])
                 // 放入一个文本按钮
                 btn = new QPushButton();
-                btn->setText(QString::number(plans_data[i][j].real_costs[k]));
+                btn->setText(QString::number(real_cost));
                 // btn->setStyleSheet("background-color: transparent; border: none; focus: none;");
                 // 只显示文本，不显示背景色，不显示边框，不显示焦点
                 btn->setFlat(true);
@@ -198,11 +209,8 @@ void MainWindow::update_plans()
                     if (editing_plan_pos.size() > 0) return;
                     QVector<int> old_info;
                     // int date_id, int row, int status, int step_id, int num
-                    old_info << j << i << plans_data[i][j].status[k] << plans_data[i][j].steps_id[k] 
-                        << plans_data[i][j].nums[k];
-                    QString equip_id = plans_data[i][j].equips[k];
-                    on_plans_cell_clicked(last_row + 1 + k * 3, j + 3, old_info, 
-                        plans_data[i][j].real_costs[k], equip_id);
+                    old_info << j << i << statu << step_id << num;
+                    on_plans_cell_clicked(last_row + 1 + k * 3, j + 3, old_info, real_cost, equip);
                 });
             }
         }
@@ -216,6 +224,10 @@ void MainWindow::update_plans()
             item = new QTableWidgetItem(QString("计划数量"));
             ui->plans->setItem(last_row + 1 + max_row * 3, 2, item);
             item->setFlags(Qt::ItemIsSelectable|Qt::ItemIsEnabled);
+        
+            item->setBackground(QColor("#92d050")); // 设置背景色为绿色
+            item->setForeground(QBrush(Qt::black));
+    
             item = new QTableWidgetItem(QString("计划时间"));
             ui->plans->setItem(last_row + 2 + max_row * 3, 2, item);
             item->setFlags(Qt::ItemIsSelectable|Qt::ItemIsEnabled);
@@ -662,22 +674,27 @@ void MainWindow::update_loads()
         QString equip_id = equips[i][0];
         for (int j = 0; j < loads.size(); j++) {
             double l = loads[j][equip_id];
-            item = new QTableWidgetItem(QString::number(l));
+            // 保留两位小数
+            if (l > 0)
+                item = new QTableWidgetItem(QString::number(l, 'f', 2));
+            else
+                item = new QTableWidgetItem("0");
             ui->loads->setItem(i, j + 2, item);
             // 0 ~ MaxLoad-MAX_DIFF 为绿色， MaxLoad-MAX_DIFF ~ MaxLoad 为黄色， >MaxLoad 为红色       
             QColor color;
             double max_load = equips[i][4].toDouble();
             if (l < max_load - MIN_DIFF) {
-                color = Qt::green;
+                color = QColor("#00b050");
             } else if (l < max_load) {
-                color = Qt::yellow;
+                color = QColor("#ffc000");
+                //color = Qt::yellow;
             } else {
                 color = Qt::red;
             }
             item->setBackground(QBrush(color));
-            double testGray = (0.299*color.red() + 0.587*color.green() + 0.114*color.blue()) / 255;
-            color = testGray > 0.5? Qt::black : Qt::white;
-            item->setForeground(QBrush(color));
+            //double testGray = (0.299*color.red() + 0.587*color.green() + 0.114*color.blue()) / 255;
+            //color = testGray > 0.5? Qt::black : Qt::white;
+            item->setForeground(QBrush(Qt::black));
         }
     }
 }
@@ -722,6 +739,8 @@ void MainWindow::on_comb_plan_id_currentTextChanged(const QString &arg1)
 
     delete this->plan_manager;
     this->plan_manager = new PlanManager(plan_id);
+    int o_level = olevel_group->checkedId();
+    plan_manager->setOLevel(o_level);
 
     QString beg = plan_manager->getBeg().toString("yyyy-MM-dd");
     QString end = plan_manager->getEnd().toString("yyyy-MM-dd");
@@ -808,4 +827,18 @@ void MainWindow::on_plan_show_menu(const QPoint &pos)
 
 
 	menu->popup(ui->plans->viewport()->mapToGlobal(pos));
+}
+
+
+void MainWindow::olevel_changed(QAbstractButton* button)
+{
+    int id = olevel_group->checkedId();
+
+    if (plan_manager == nullptr) return;
+    if (id == plan_manager->getOLevel()) return;
+
+    plan_manager->setOLevel(id);
+    plan_manager->updatePlan();
+    update_plans();
+    update_loads();
 }
